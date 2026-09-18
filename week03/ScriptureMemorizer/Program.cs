@@ -24,7 +24,8 @@ class Program
             new Scripture(new Reference("Proverbs", 3, 5, 6), "Trust in the Lord with all thine heart and lean not unto thine own understanding In all thy ways acknowledge him and he shall direct thy paths"),
             new Scripture(new Reference("Philippians", 4, 13), "I can do all things through Christ which strengtheneth me"),
             new Scripture(new Reference("2 Nephi", 2, 25), "Adam fell that men might be and men are that they might have joy"),
-            new Scripture(new Reference("Doctrine and Covenants", 6, 36), "Look unto me in every thought doubt not fear not")
+            new Scripture(new Reference("Doctrine and Covenants", 6, 36), "Look unto me in every thought doubt not fear not"),
+            new Scripture(new Reference("Joshua", 1, 9), "Be strong and of a good courage be not afraid neither be thou dismayed for the Lord thy God is with thee whithersoever thou goest")
         };
 
         Random random = new Random();
@@ -35,6 +36,7 @@ class Program
             Console.Clear();
             Console.WriteLine(scripture.GetDisplayText());
             Console.WriteLine();
+            Console.WriteLine($"Words remaining: {scripture.GetVisibleWordCount()}/{scripture.GetWordCount()}");
 
             // Criterion 7: Termination check
             if (scripture.IsCompletelyHidden())
@@ -46,7 +48,7 @@ class Program
             Console.WriteLine("Press enter to continue or type 'quit' to finish:");
             string input = Console.ReadLine();
 
-            if (input.ToLower() == "quit")
+            if (string.Equals(input, "quit", StringComparison.OrdinalIgnoreCase))
             {
                 break;
             }
