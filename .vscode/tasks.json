@@ -224,5 +224,18 @@
             "problemMatcher": "$msCompile"
         },
 
+        {
+            "label": "build-Journal",
+            "command": "dotnet",
+            "type": "process",
+            "args": [
+                "build",
+                "${workspaceFolder}/Journal/Journal.csproj",
+                "/property:GenerateFullPaths=true",
+                "/consoleloggerparameters:NoSummary"
+            ],
+            "problemMatcher": "$msCompile"
+        }
+
     ]
 }
