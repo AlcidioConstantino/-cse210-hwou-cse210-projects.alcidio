@@ -3,7 +3,7 @@ using System.Text.Json;
 // Creativity beyond the core requirements: the player's title and level rise as
 // their score grows, and a progress bar shows how close they are to the next level.
 const string SaveFile = "eternal-quest.json";
-var goals = new List<Goal>();
+List<Goal> goals = new();
 int score = 0;
 LoadIfPresent();
 
@@ -11,6 +11,7 @@ while (true)
 {
     Console.WriteLine("\n=== Eternal Quest ===");
     Console.WriteLine($"Score: {score} | Level {GetLevel(score)} — {GetTitle(score)}");
+    Console.WriteLine($"Next level: {GetProgressBar(score)}");
     Console.WriteLine("1. List goals\n2. Create goal\n3. Record goal event\n4. Save\n5. Load\n6. Quit");
     Console.Write("Choose an option: ");
     switch (Console.ReadLine())
@@ -35,7 +36,7 @@ void ListGoals()
 void CreateGoal()
 {
     Console.WriteLine("Goal type: 1. Simple  2. Eternal  3. Checklist");
-    string? type = Console.ReadLine();
+    string type = Console.ReadLine() ?? "";
     string name = Ask("Name: ");
     string description = Ask("Description: ");
     int points = ReadInt("Points per completion: ", 1);
@@ -68,7 +69,7 @@ void RecordGoal()
 
 void Save()
 {
-    var data = new SaveData(score, goals.Select(g => g.ToData()).ToList());
+    SaveData data = new(score, goals.Select(goal => goal.ToData()).ToList());
     File.WriteAllText(SaveFile, JsonSerializer.Serialize(data, new JsonSerializerOptions { WriteIndented = true }));
     Console.WriteLine($"Saved to {Path.GetFullPath(SaveFile)}");
 }
@@ -78,8 +79,8 @@ void Load()
     if (!File.Exists(SaveFile)) { Console.WriteLine("No save file found."); return; }
     try
     {
-        var data = JsonSerializer.Deserialize<SaveData>(File.ReadAllText(SaveFile));
-        if (data is null) { Console.WriteLine("Save file is empty or invalid."); return; }
+        SaveData data = JsonSerializer.Deserialize<SaveData>(File.ReadAllText(SaveFile));
+        if (data is null || data.Goals is null || data.Score < 0) { Console.WriteLine("Save file is empty or invalid."); return; }
         score = data.Score;
         goals = data.Goals.Select(Goal.FromData).ToList();
         Console.WriteLine("Save loaded.");
@@ -100,63 +101,9 @@ int ReadInt(string prompt, int min, int max = int.MaxValue)
 }
 int GetLevel(int points) => points / 500 + 1;
 string GetTitle(int points) => points switch { >= 5000 => "Eternal Champion", >= 2500 => "Quest Master", >= 1000 => "Pathfinder", >= 500 => "Seeker", _ => "Initiate" };
-
-abstract class Goal
+string GetProgressBar(int points)
 {
-    public string Name { get; }
-    public string Description { get; }
-    public int Points { get; }
-    public abstract string StatusMark { get; }
-    protected Goal(string name, string description, int points) { Name = name; Description = description; Points = points; }
-    public abstract int RecordEvent();
-    public abstract string Details { get; }
-    public abstract GoalData ToData();
-    public static Goal FromData(GoalData d) => d.Type switch
-    {
-        "simple" => new SimpleGoal(d.Name, d.Description, d.Points, d.Completed),
-        "eternal" => new EternalGoal(d.Name, d.Description, d.Points, d.Count),
-        "checklist" => new ChecklistGoal(d.Name, d.Description, d.Points, d.Target, d.Bonus, d.Count),
-        _ => throw new InvalidDataException($"Unknown goal type '{d.Type}'.")
-    };
+    int progress = points % 500;
+    int filled = progress / 50;
+    return $"[{new string('#', filled)}{new string('-', 10 - filled)}] {500 - progress} points remaining";
 }
-
-sealed class SimpleGoal : Goal
-{
-    private bool _completed;
-    public SimpleGoal(string name, string description, int points, bool completed = false) : base(name, description, points) => _completed = completed;
-    public override string StatusMark => _completed ? "[X]" : "[ ]";
-    public override string Details => $"Simple goal, {Points} points";
-    public override int RecordEvent() { if (_completed) return 0; _completed = true; return Points; }
-    public override GoalData ToData() => new("simple", Name, Description, Points, Completed: _completed);
-}
-
-sealed class EternalGoal : Goal
-{
-    private int _count;
-    public EternalGoal(string name, string description, int points, int count = 0) : base(name, description, points) => _count = count;
-    public override string StatusMark => "[∞]";
-    public override string Details => $"Eternal goal, completed {_count} times; {Points} points each time";
-    public override int RecordEvent() { _count++; return Points; }
-    public override GoalData ToData() => new("eternal", Name, Description, Points, Count: _count);
-}
-
-sealed class ChecklistGoal : Goal
-{
-    private readonly int _target;
-    private readonly int _bonus;
-    private int _count;
-    public ChecklistGoal(string name, string description, int points, int target, int bonus, int count = 0) : base(name, description, points)
-    { _target = target; _bonus = bonus; _count = Math.Min(count, target); }
-    public override string StatusMark => _count >= _target ? "[X]" : "[ ]";
-    public override string Details => $"Checklist: {_count}/{_target} times, {Points} points each, {_bonus} bonus on completion";
-    public override int RecordEvent()
-    {
-        if (_count >= _target) return 0;
-        _count++;
-        return Points + (_count == _target ? _bonus : 0);
-    }
-    public override GoalData ToData() => new("checklist", Name, Description, Points, Count: _count, Target: _target, Bonus: _bonus);
-}
-
-sealed record GoalData(string Type, string Name, string Description, int Points, bool Completed = false, int Count = 0, int Target = 0, int Bonus = 0);
-sealed record SaveData(int Score, List<GoalData> Goals);
